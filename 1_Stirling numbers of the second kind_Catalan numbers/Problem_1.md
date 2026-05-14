@@ -26,9 +26,10 @@
 예시:
 
 ```bash
-python main.py < input/input_1.txt
-python main.py < input/input_2.txt
-python main.py < input/input_3.txt
+python answer.py < input/input_1.txt
+python answer_upgrade.py < input/input_1.txt
+python answer.py < input/input_2.txt
+python answer_upgrade.py < input/input_3.txt
 ```
 
 ## 예상 답
