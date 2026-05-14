@@ -21,6 +21,7 @@
 - `input/input_1.txt`
 - `input/input_2.txt`
 - `input/input_3.txt`
+- `input/input_hard.txt`
 
 ## 실행 방법
 예시:
@@ -30,6 +31,7 @@ python answer.py < input/input_1.txt
 python answer_upgrade.py < input/input_1.txt
 python answer.py < input/input_2.txt
 python answer_upgrade.py < input/input_3.txt
+python answer_upgrade.py < input/input_hard.txt
 ```
 
 ## 예상 답
@@ -40,3 +42,5 @@ python answer_upgrade.py < input/input_3.txt
   - 출력: `7 14`
 - `input_3.txt`
   - 출력: `25 42`
+- `input_hard.txt`
+  - 출력: `177979707061075333384555 3814986502092304`

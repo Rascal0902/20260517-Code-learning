@@ -23,6 +23,7 @@
 - `input/input_1.txt`
 - `input/input_2.txt`
 - `input/input_3.txt`
+- `input/input_hard.txt`
 
 ## 실행 방법
 예시:
@@ -31,6 +32,7 @@
 python answer.py < input/input_1.txt
 python answer.py < input/input_2.txt
 python answer_visualization.py < input/input_3.txt
+python answer.py < input/input_hard.txt
 ```
 
 ## 예상 답
@@ -41,3 +43,5 @@ python answer_visualization.py < input/input_3.txt
   - 출력: `0 1 3 4 7 INF`
 - `input_3.txt`
   - 출력: `7 0 2 5 6 10`
+- `input_hard.txt`
+  - 출력: `0 4 2 9 5 6 12 13 12 10 12 12 21 16 15 15 16 17 23 21`

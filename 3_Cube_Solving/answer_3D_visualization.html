@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cube Solving 3D Visualization</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --line: #cbd5e1;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-soft: #dbeafe;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      --radius: 8px;
+      --cube-size: 240px;
+      --sticker-gap: 8px;
+      --sticker-radius: 6px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(520px, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(10px);
+      padding: 24px;
+      display: grid;
+      align-content: start;
+      gap: 20px;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 24px;
+      gap: 18px;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    .section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .section h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .section p,
+    .hint,
+    .status-line,
+    .moves {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font: 14px/1.5 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: var(--text);
+      background: var(--panel);
+      outline: none;
+    }
+
+    textarea:focus,
+    button:focus,
+    input[type="range"]:focus {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+    }
+
+    .button-row,
+    .secondary-row,
+    .transport-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .move-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .move-grid button {
+      width: 100%;
+      padding: 0;
+    }
+
+    button {
+      height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    }
+
+    button:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .active {
+      background: var(--accent-soft);
+      border-color: #93c5fd;
+      color: #1e3a8a;
+    }
+
+    .status {
+      min-height: 46px;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .status.error {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: var(--danger);
+    }
+
+    .status.success {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .main-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      padding-bottom: 4px;
+    }
+
+    .main-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .main-header .hint {
+      text-align: right;
+    }
+
+    .viewer-wrap {
+      position: relative;
+      min-height: 540px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at top, rgba(191, 219, 254, 0.55), transparent 45%),
+        linear-gradient(180deg, #ffffff 0%, #eef2ff 100%);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .viewer {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      perspective: 1300px;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .viewer.dragging {
+      cursor: grabbing;
+    }
+
+    .cube {
+      position: relative;
+      width: var(--cube-size);
+      height: var(--cube-size);
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: var(--sticker-gap);
+      padding: 10px;
+      background: rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(15, 23, 42, 0.22);
+      border-radius: 6px;
+      backface-visibility: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+
+    .sticker {
+      border-radius: var(--sticker-radius);
+      border: 1px solid rgba(15, 23, 42, 0.22);
+      box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.35),
+        inset 0 -6px 10px rgba(15, 23, 42, 0.06);
+    }
+
+    .face-U { transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2)); }
+    .face-D { transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2)); }
+    .face-F { transform: translateZ(calc(var(--cube-size) / 2)); }
+    .face-B { transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2)); }
+    .face-L { transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2)); }
+    .face-R { transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2)); }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: var(--shadow);
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .metric-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .moves {
+      min-height: 44px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      word-break: break-word;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .main-header {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      .main-header .hint {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .main,
+      .sidebar {
+        padding: 16px;
+      }
+
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .slider-row {
+        grid-template-columns: 1fr;
+      }
+
+      .viewer-wrap {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="section">
+        <h2>Input</h2>
+        <textarea id="cubeInput" spellcheck="false"></textarea>
+        <div class="button-row">
+          <button class="primary" id="solveButton">Solve</button>
+          <button class="sample-button" id="loadSolvedButton">Solved</button>
+          <button class="sample-button" id="sample1Button">Sample 1</button>
+          <button class="sample-button" id="sample2Button">Sample 2</button>
+          <button class="sample-button" id="sample3Button">Sample 3</button>
+          <button class="sample-button" id="sampleHardButton">Hard</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Build Sample</h2>
+        <div class="move-grid" id="builderMoveGrid"></div>
+        <div class="button-row">
+          <button id="undoBuilderButton">Undo Move</button>
+          <button id="clearBuilderButton">Reset Cube</button>
+          <button id="solveCurrentButton">Solve Current</button>
+        </div>
+        <div class="moves" id="builderMovesBox">(none)</div>
+      </div>
+
+      <div class="section">
+        <h2>Status</h2>
+        <div class="status" id="statusBox">
+          <div class="status-line" id="statusLine">Ready</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Moves</h2>
+        <div class="moves" id="movesBox">(none)</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="main-header">
+        <div>
+          <h1>Cube Solving 3D Visualization</h1>
+        </div>
+        <div class="hint">
+          Drag to orbit
+          <span class="tag">Wheel to zoom</span>
+        </div>
+      </div>
+
+      <div class="viewer-wrap">
+        <div class="viewer" id="viewer">
+          <div class="cube" id="cube3d"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="status-grid">
+          <div class="metric">
+            <span class="metric-label">Step</span>
+            <span class="metric-value" id="stepValue">0 / 0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Current</span>
+            <span class="metric-value" id="currentMoveValue">Initial</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Length</span>
+            <span class="metric-value" id="lengthValue">0</span>
+          </div>
+        </div>
+
+        <div class="transport-row">
+          <button id="prevButton">Previous</button>
+          <button id="nextButton">Next</button>
+          <button id="playButton">Play</button>
+          <button id="resetStepButton">Reset Step</button>
+          <button id="resetViewButton">Reset View</button>
+        </div>
+
+        <div class="slider-row">
+          <span class="hint">0</span>
+          <input type="range" id="stepSlider" min="0" max="0" value="0">
+          <span class="hint" id="sliderMax">0</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const FACE_ORDER = ["U", "D", "F", "B", "L", "R"];
+    const FACE_COLORS = {
+      U: "W",
+      D: "Y",
+      F: "G",
+      B: "B",
+      L: "O",
+      R: "R",
+    };
+    const MOVE_ORDER = [
+      "U", "U'", "U2",
+      "D", "D'", "D2",
+      "L", "L'", "L2",
+      "R", "R'", "R2",
+      "F", "F'", "F2",
+      "B", "B'", "B2",
+    ];
+    const BASE_MOVE_INFO = {
+      U: ["y", 1, 1],
+      D: ["y", -1, -1],
+      L: ["x", -1, -1],
+      R: ["x", 1, 1],
+      F: ["z", 1, -1],
+      B: ["z", -1, 1],
+    };
+    const COLOR_MAP = {
+      W: "#f8fafc",
+      Y: "#facc15",
+      G: "#22c55e",
+      B: "#3b82f6",
+      O: "#fb923c",
+      R: "#ef4444",
+    };
+    const MAX_VISITED_STATES = 300000;
+    const SOLVED_STATE = FACE_ORDER.map((face) => FACE_COLORS[face].repeat(9)).join("");
+
+    const samples = {
+      solved: [
+        "WWWWWWWWW",
+        "YYYYYYYYY",
+        "GGGGGGGGG",
+        "BBBBBBBBB",
+        "OOOOOOOOO",
+        "RRRRRRRRR",
+      ].join("\n"),
+      sample1: [
+        "WWWWWWWWW",
+        "YYYYYYYYY",
+        "OOOGGGGGG",
+        "RRRBBBBBB",
+        "BBBOOOOOO",
+        "GGGRRRRRR",
+      ].join("\n"),
+      sample2: [
+        "BBBWWWWWW",
+        "YYGYYGYYG",
+        "OOOGGWGGW",
+        "RRRYBBYBB",
+        "YBBOOOOOO",
+        "GGWRRRRRR",
+      ].join("\n"),
+      sample3: [
+        "BBBWWYWWY",
+        "WWGYYGYYG",
+        "OORGGWGGY",
+        "RRRYBBWBB",
+        "YBBOOROOR",
+        "GGWRRROOO",
+      ].join("\n"),
+      sampleHard: [
+        "YYGBWYBBW",
+        "WGWWYWBWR",
+        "OOOYGWBRR",
+        "RGGGBYBRY",
+        "ORYROOROO",
+        "GBYBROGGW",
+      ].join("\n"),
+    };
+
+    function buildFaceDefinitions() {
+      const definitions = [];
+
+      for (const face of FACE_ORDER) {
+        for (let row = 0; row < 3; row += 1) {
+          for (let col = 0; col < 3; col += 1) {
+            let position;
+            let normal;
+            if (face === "U") {
+              position = [-1 + col, 1, -1 + row];
+              normal = [0, 1, 0];
+            } else if (face === "D") {
+              position = [-1 + col, -1, 1 - row];
+              normal = [0, -1, 0];
+            } else if (face === "F") {
+              position = [-1 + col, 1 - row, 1];
+              normal = [0, 0, 1];
+            } else if (face === "B") {
+              position = [1 - col, 1 - row, -1];
+              normal = [0, 0, -1];
+            } else if (face === "L") {
+              position = [-1, 1 - row, -1 + col];
+              normal = [-1, 0, 0];
+            } else {
+              position = [1, 1 - row, 1 - col];
+              normal = [1, 0, 0];
+            }
+            definitions.push({ face, row, col, position, normal });
+          }
+        }
+      }
+
+      return definitions;
+    }
+
+    function rotateVector(vector, axis, direction) {
+      const [x, y, z] = vector;
+      if (axis === "x") {
+        return [x, -direction * z, direction * y];
+      }
+      if (axis === "y") {
+        return [direction * z, y, -direction * x];
+      }
+      return [direction * y, -direction * x, z];
+    }
+
+    function composePermutations(first, second) {
+      return first.map((index) => second[index]);
+    }
+
+    function geometryKey(position, normal) {
+      return `${position.join(",")}|${normal.join(",")}`;
+    }
+
+    function buildMovePermutations(definitions) {
+      const indexByGeometry = new Map();
+      definitions.forEach((definition, index) => {
+        indexByGeometry.set(geometryKey(definition.position, definition.normal), index);
+      });
+
+      const axisIndex = { x: 0, y: 1, z: 2 };
+      const basePermutations = {};
+
+      for (const [move, [axis, layer, direction]] of Object.entries(BASE_MOVE_INFO)) {
+        const permutation = new Array(definitions.length).fill(0);
+        const coordinateIndex = axisIndex[axis];
+
+        definitions.forEach((definition, oldIndex) => {
+          const { position, normal } = definition;
+          let newPosition = position;
+          let newNormal = normal;
+
+          if (position[coordinateIndex] === layer) {
+            newPosition = rotateVector(position, axis, direction);
+            newNormal = rotateVector(normal, axis, direction);
+          }
+
+          const newIndex = indexByGeometry.get(geometryKey(newPosition, newNormal));
+          permutation[newIndex] = oldIndex;
+        });
+
+        basePermutations[move] = permutation;
+      }
+
+      const permutations = {};
+      for (const face of Object.keys(BASE_MOVE_INFO)) {
+        permutations[face] = basePermutations[face];
+        permutations[`${face}2`] = composePermutations(basePermutations[face], basePermutations[face]);
+        permutations[`${face}'`] = composePermutations(permutations[`${face}2`], basePermutations[face]);
+      }
+
+      return permutations;
+    }
+
+    function applyMove(state, move, permutations) {
+      const permutation = permutations[move];
+      let next = "";
+      for (let index = 0; index < permutation.length; index += 1) {
+        next += state[permutation[index]];
+      }
+      return next;
+    }
+
+    function inverseMove(move) {
+      if (move.endsWith("2")) {
+        return move;
+      }
+      if (move.endsWith("'")) {
+        return move[0];
+      }
+      return `${move}'`;
+    }
+
+    function validateState(state) {
+      if (state.length !== 54) {
+        throw new Error("Input must contain exactly 54 stickers.");
+      }
+
+      const counts = new Map();
+      for (const color of state) {
+        counts.set(color, (counts.get(color) || 0) + 1);
+      }
+
+      for (const color of Object.values(FACE_COLORS)) {
+        if ((counts.get(color) || 0) !== 9) {
+          throw new Error("Each color must appear exactly 9 times.");
+        }
+      }
+    }
+
+    function expandFrontier(frontier, visited, otherVisited, permutations) {
+      const nextFrontier = [];
+
+      for (const state of frontier) {
+        const previousMove = visited.get(state)[1];
+        for (const move of MOVE_ORDER) {
+          if (previousMove !== null && previousMove[0] === move[0]) {
+            continue;
+          }
+
+          const nextState = applyMove(state, move, permutations);
+          if (visited.has(nextState)) {
+            continue;
+          }
+
+          visited.set(nextState, [state, move]);
+          if (otherVisited.has(nextState)) {
+            return [nextState, nextFrontier];
+          }
+
+          nextFrontier.push(nextState);
+          if (visited.size > MAX_VISITED_STATES) {
+            throw new Error("Search space became too large for this educational solver.");
+          }
+        }
+      }
+
+      return [null, nextFrontier];
+    }
+
+    function reconstructSolution(meetingState, forwardVisited, backwardVisited) {
+      const forwardMoves = [];
+      let state = meetingState;
+      while (forwardVisited.get(state)[0] !== null) {
+        const [parent, move] = forwardVisited.get(state);
+        forwardMoves.push(move);
+        state = parent;
+      }
+      forwardMoves.reverse();
+
+      const backwardMoves = [];
+      state = meetingState;
+      while (backwardVisited.get(state)[0] !== null) {
+        const [parent, move] = backwardVisited.get(state);
+        backwardMoves.push(inverseMove(move));
+        state = parent;
+      }
+
+      return [...forwardMoves, ...backwardMoves];
+    }
+
+    function solveCube(initialState, permutations) {
+      validateState(initialState);
+      if (initialState === SOLVED_STATE) {
+        return [];
+      }
+
+      const forwardVisited = new Map([[initialState, [null, null]]]);
+      const backwardVisited = new Map([[SOLVED_STATE, [null, null]]]);
+      let forwardFrontier = [initialState];
+      let backwardFrontier = [SOLVED_STATE];
+
+      while (forwardFrontier.length > 0 && backwardFrontier.length > 0) {
+        let meetingState;
+        if (forwardFrontier.length <= backwardFrontier.length) {
+          [meetingState, forwardFrontier] = expandFrontier(
+            forwardFrontier,
+            forwardVisited,
+            backwardVisited,
+            permutations,
+          );
+        } else {
+          [meetingState, backwardFrontier] = expandFrontier(
+            backwardFrontier,
+            backwardVisited,
+            forwardVisited,
+            permutations,
+          );
+        }
+
+        if (meetingState !== null) {
+          return reconstructSolution(meetingState, forwardVisited, backwardVisited);
+        }
+      }
+
+      throw new Error("No solution found.");
+    }
+
+    function normalizeInput(text) {
+      const lines = text
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      return lines.join("");
+    }
+
+    function stateToFaces(state) {
+      const faces = {};
+      FACE_ORDER.forEach((face, index) => {
+        faces[face] = state.slice(index * 9, index * 9 + 9);
+      });
+      return faces;
+    }
+
+    function buildFrames(initialState, solutionMoves, permutations) {
+      const frames = [initialState];
+      let current = initialState;
+      for (const move of solutionMoves) {
+        current = applyMove(current, move, permutations);
+        frames.push(current);
+      }
+      return frames;
+    }
+
+    function moveToQuarterTurns(move) {
+      if (move.endsWith("2")) {
+        return 2;
+      }
+      if (move.endsWith("'")) {
+        return 3;
+      }
+      return 1;
+    }
+
+    function quarterTurnsToMove(face, turns) {
+      const normalized = turns % 4;
+      if (normalized === 0) {
+        return null;
+      }
+      if (normalized === 1) {
+        return face;
+      }
+      if (normalized === 2) {
+        return `${face}2`;
+      }
+      return `${face}'`;
+    }
+
+    function simplifyMoveSequence(moves) {
+      const simplified = [];
+
+      for (const move of moves) {
+        if (simplified.length === 0 || simplified[simplified.length - 1][0] !== move[0]) {
+          simplified.push(move);
+          continue;
+        }
+
+        const previous = simplified.pop();
+        const merged = quarterTurnsToMove(
+          move[0],
+          moveToQuarterTurns(previous) + moveToQuarterTurns(move),
+        );
+
+        if (merged !== null) {
+          simplified.push(merged);
+        }
+      }
+
+      return simplified;
+    }
+
+    function reverseSolutionFromBuilderMoves(moves) {
+      return simplifyMoveSequence(moves)
+        .slice()
+        .reverse()
+        .map((move) => inverseMove(move));
+    }
+
+    function stateToText(state) {
+      const lines = [];
+      for (let index = 0; index < FACE_ORDER.length; index += 1) {
+        lines.push(state.slice(index * 9, index * 9 + 9));
+      }
+      return lines.join("\n");
+    }
+
+    const definitions = buildFaceDefinitions();
+    const permutations = buildMovePermutations(definitions);
+
+    const elements = {
+      input: document.getElementById("cubeInput"),
+      statusBox: document.getElementById("statusBox"),
+      statusLine: document.getElementById("statusLine"),
+      movesBox: document.getElementById("movesBox"),
+      cube: document.getElementById("cube3d"),
+      viewer: document.getElementById("viewer"),
+      solveButton: document.getElementById("solveButton"),
+      loadSolvedButton: document.getElementById("loadSolvedButton"),
+      sample1Button: document.getElementById("sample1Button"),
+      sample2Button: document.getElementById("sample2Button"),
+      sample3Button: document.getElementById("sample3Button"),
+      sampleHardButton: document.getElementById("sampleHardButton"),
+      builderMoveGrid: document.getElementById("builderMoveGrid"),
+      builderMovesBox: document.getElementById("builderMovesBox"),
+      undoBuilderButton: document.getElementById("undoBuilderButton"),
+      clearBuilderButton: document.getElementById("clearBuilderButton"),
+      solveCurrentButton: document.getElementById("solveCurrentButton"),
+      prevButton: document.getElementById("prevButton"),
+      nextButton: document.getElementById("nextButton"),
+      playButton: document.getElementById("playButton"),
+      resetStepButton: document.getElementById("resetStepButton"),
+      resetViewButton: document.getElementById("resetViewButton"),
+      stepValue: document.getElementById("stepValue"),
+      currentMoveValue: document.getElementById("currentMoveValue"),
+      lengthValue: document.getElementById("lengthValue"),
+      stepSlider: document.getElementById("stepSlider"),
+      sliderMax: document.getElementById("sliderMax"),
+    };
+
+    const appState = {
+      inputState: SOLVED_STATE,
+      solutionMoves: [],
+      frames: [SOLVED_STATE],
+      currentStep: 0,
+      builderMoves: [],
+      builderStates: [SOLVED_STATE],
+      playTimer: null,
+      yaw: -34,
+      pitch: -28,
+      zoom: 1,
+      isDragging: false,
+      dragX: 0,
+      dragY: 0,
+    };
+
+    function setStatus(message, type = "default") {
+      elements.statusLine.textContent = message;
+      elements.statusBox.className = "status";
+      if (type === "error") {
+        elements.statusBox.classList.add("error");
+      } else if (type === "success") {
+        elements.statusBox.classList.add("success");
+      }
+    }
+
+    function createCubeDom() {
+      for (const face of FACE_ORDER) {
+        const faceElement = document.createElement("div");
+        faceElement.className = `face face-${face}`;
+        faceElement.dataset.face = face;
+
+        for (let index = 0; index < 9; index += 1) {
+          const sticker = document.createElement("div");
+          sticker.className = "sticker";
+          sticker.dataset.face = face;
+          sticker.dataset.index = String(index);
+          faceElement.appendChild(sticker);
+        }
+
+        elements.cube.appendChild(faceElement);
+      }
+    }
+
+    function createBuilderMoveButtons() {
+      for (const move of MOVE_ORDER) {
+        const button = document.createElement("button");
+        button.textContent = move;
+        button.addEventListener("click", () => {
+          applyBuilderMove(move);
+        });
+        elements.builderMoveGrid.appendChild(button);
+      }
+    }
+
+    function updateCubeTransform() {
+      elements.cube.style.transform =
+        `scale(${appState.zoom}) rotateX(${appState.pitch}deg) rotateY(${appState.yaw}deg)`;
+    }
+
+    function renderCube(state) {
+      const faces = stateToFaces(state);
+      for (const face of FACE_ORDER) {
+        const stickers = elements.cube.querySelectorAll(`.sticker[data-face="${face}"]`);
+        faces[face].split("").forEach((colorCode, index) => {
+          stickers[index].style.background = COLOR_MAP[colorCode];
+        });
+      }
+    }
+
+    function updateTransport() {
+      elements.stepValue.textContent = `${appState.currentStep} / ${appState.solutionMoves.length}`;
+      elements.currentMoveValue.textContent =
+        appState.currentStep === 0 ? "Initial" : appState.solutionMoves[appState.currentStep - 1];
+      elements.lengthValue.textContent = String(appState.solutionMoves.length);
+      elements.stepSlider.max = String(appState.solutionMoves.length);
+      elements.stepSlider.value = String(appState.currentStep);
+      elements.sliderMax.textContent = String(appState.solutionMoves.length);
+      elements.movesBox.textContent = appState.solutionMoves.join(" ") || "(none)";
+      renderCube(appState.frames[appState.currentStep]);
+      elements.playButton.textContent = appState.playTimer === null ? "Play" : "Pause";
+    }
+
+    function renderBuilderMoves() {
+      elements.builderMovesBox.textContent = appState.builderMoves.join(" ") || "(none)";
+    }
+
+    function stopPlayback() {
+      if (appState.playTimer !== null) {
+        window.clearInterval(appState.playTimer);
+        appState.playTimer = null;
+      }
+      elements.playButton.textContent = "Play";
+    }
+
+    function goToStep(step) {
+      appState.currentStep = Math.max(0, Math.min(step, appState.solutionMoves.length));
+      updateTransport();
+    }
+
+    function startPlayback() {
+      if (appState.solutionMoves.length === 0) {
+        return;
+      }
+      if (appState.currentStep >= appState.solutionMoves.length) {
+        appState.currentStep = 0;
+      }
+
+      appState.playTimer = window.setInterval(() => {
+        if (appState.currentStep >= appState.solutionMoves.length) {
+          stopPlayback();
+          return;
+        }
+        goToStep(appState.currentStep + 1);
+      }, 700);
+      elements.playButton.textContent = "Pause";
+    }
+
+    function resetView() {
+      appState.yaw = -34;
+      appState.pitch = -28;
+      appState.zoom = 1;
+      updateCubeTransform();
+    }
+
+    function previewInputState(state) {
+      appState.inputState = state;
+      appState.solutionMoves = [];
+      appState.frames = [state];
+      appState.currentStep = 0;
+      updateTransport();
+    }
+
+    function setBuilderState(state) {
+      appState.builderMoves = [];
+      appState.builderStates = [state];
+      elements.input.value = stateToText(state);
+      previewInputState(state);
+      renderBuilderMoves();
+    }
+
+    function loadSample(value, button) {
+      const normalized = normalizeInput(value);
+      setBuilderState(normalized);
+      document.querySelectorAll(".sample-button").forEach((element) => {
+        element.classList.remove("active");
+      });
+      button.classList.add("active");
+      setStatus("Input loaded", "default");
+    }
+
+    function applyBuilderMove(move) {
+      stopPlayback();
+      const baseState = appState.builderStates[appState.builderStates.length - 1];
+      const nextState = applyMove(baseState, move, permutations);
+      appState.builderMoves.push(move);
+      appState.builderStates.push(nextState);
+      elements.input.value = stateToText(nextState);
+      previewInputState(nextState);
+      renderBuilderMoves();
+      setStatus(`Applied ${move}`, "default");
+    }
+
+    function undoBuilderMove() {
+      stopPlayback();
+      if (appState.builderMoves.length === 0) {
+        return;
+      }
+      appState.builderMoves.pop();
+      appState.builderStates.pop();
+      const currentState = appState.builderStates[appState.builderStates.length - 1];
+      elements.input.value = stateToText(currentState);
+      previewInputState(currentState);
+      renderBuilderMoves();
+      setStatus("Last move removed", "default");
+    }
+
+    function solveFromInput() {
+      stopPlayback();
+
+      try {
+        const normalized = normalizeInput(elements.input.value);
+        const solutionMoves = solveCube(normalized, permutations);
+        const frames = buildFrames(normalized, solutionMoves, permutations);
+
+        if (appState.builderStates[appState.builderStates.length - 1] !== normalized) {
+          appState.builderMoves = [];
+          appState.builderStates = [normalized];
+          renderBuilderMoves();
+        }
+
+        appState.inputState = normalized;
+        appState.solutionMoves = solutionMoves;
+        appState.frames = frames;
+        appState.currentStep = 0;
+
+        updateTransport();
+        setStatus(`Solved in ${solutionMoves.length} move${solutionMoves.length === 1 ? "" : "s"}`, "success");
+      } catch (error) {
+        const normalized = normalizeInput(elements.input.value);
+        const builderState = appState.builderStates[appState.builderStates.length - 1];
+        const canUseBuilderFallback =
+          error.message === "Search space became too large for this educational solver." &&
+          builderState === normalized &&
+          appState.builderMoves.length > 0;
+
+        if (!canUseBuilderFallback) {
+          setStatus(error.message, "error");
+          return;
+        }
+
+        const solutionMoves = reverseSolutionFromBuilderMoves(appState.builderMoves);
+        const frames = buildFrames(normalized, solutionMoves, permutations);
+
+        appState.inputState = normalized;
+        appState.solutionMoves = solutionMoves;
+        appState.frames = frames;
+        appState.currentStep = 0;
+
+        updateTransport();
+        setStatus(
+          `Search limit reached, so this uses the exact reverse of your ${appState.builderMoves.length} builder move${appState.builderMoves.length === 1 ? "" : "s"}.`,
+          "success",
+        );
+      }
+    }
+
+    elements.solveButton.addEventListener("click", solveFromInput);
+    elements.loadSolvedButton.addEventListener("click", () => loadSample(samples.solved, elements.loadSolvedButton));
+    elements.sample1Button.addEventListener("click", () => loadSample(samples.sample1, elements.sample1Button));
+    elements.sample2Button.addEventListener("click", () => loadSample(samples.sample2, elements.sample2Button));
+    elements.sample3Button.addEventListener("click", () => loadSample(samples.sample3, elements.sample3Button));
+    elements.sampleHardButton.addEventListener("click", () => loadSample(samples.sampleHard, elements.sampleHardButton));
+    elements.undoBuilderButton.addEventListener("click", undoBuilderMove);
+    elements.clearBuilderButton.addEventListener("click", () => {
+      stopPlayback();
+      setBuilderState(SOLVED_STATE);
+      setStatus("Cube reset", "default");
+    });
+    elements.solveCurrentButton.addEventListener("click", solveFromInput);
+
+    elements.prevButton.addEventListener("click", () => {
+      stopPlayback();
+      goToStep(appState.currentStep - 1);
+    });
+
+    elements.nextButton.addEventListener("click", () => {
+      stopPlayback();
+      goToStep(appState.currentStep + 1);
+    });
+
+    elements.resetStepButton.addEventListener("click", () => {
+      stopPlayback();
+      goToStep(0);
+    });
+
+    elements.playButton.addEventListener("click", () => {
+      if (appState.playTimer === null) {
+        startPlayback();
+      } else {
+        stopPlayback();
+      }
+    });
+
+    elements.resetViewButton.addEventListener("click", resetView);
+
+    elements.stepSlider.addEventListener("input", (event) => {
+      stopPlayback();
+      goToStep(Number(event.target.value));
+    });
+
+    elements.viewer.addEventListener("pointerdown", (event) => {
+      appState.isDragging = true;
+      appState.dragX = event.clientX;
+      appState.dragY = event.clientY;
+      elements.viewer.classList.add("dragging");
+      elements.viewer.setPointerCapture(event.pointerId);
+    });
+
+    elements.viewer.addEventListener("pointermove", (event) => {
+      if (!appState.isDragging) {
+        return;
+      }
+      const deltaX = event.clientX - appState.dragX;
+      const deltaY = event.clientY - appState.dragY;
+      appState.dragX = event.clientX;
+      appState.dragY = event.clientY;
+      appState.yaw += deltaX * 0.45;
+      appState.pitch -= deltaY * 0.45;
+      appState.pitch = Math.max(-89, Math.min(89, appState.pitch));
+      updateCubeTransform();
+    });
+
+    function releasePointer() {
+      appState.isDragging = false;
+      elements.viewer.classList.remove("dragging");
+    }
+
+    elements.viewer.addEventListener("pointerup", releasePointer);
+    elements.viewer.addEventListener("pointercancel", releasePointer);
+    elements.viewer.addEventListener("pointerleave", releasePointer);
+
+    elements.viewer.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.08 : 0.92;
+      appState.zoom = Math.max(0.65, Math.min(1.65, appState.zoom * factor));
+      updateCubeTransform();
+    }, { passive: false });
+
+    elements.input.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        solveFromInput();
+      }
+    });
+
+    createCubeDom();
+    createBuilderMoveButtons();
+    resetView();
+    loadSample(samples.sample3, elements.sample3Button);
+    solveFromInput();
+  </script>
+</body>
+</html>

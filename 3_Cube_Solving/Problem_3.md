@@ -62,6 +62,7 @@ RRRRRRRRR
 - `input/input_1.txt`
 - `input/input_2.txt`
 - `input/input_3.txt`
+- `input/input_hard.txt`
 
 ## 실행 방법
 예시:
@@ -69,8 +70,11 @@ RRRRRRRRR
 ```bash
 python answer.py < input/input_1.txt
 python answer.py < input/input_2.txt
-python answer_visualization.py < input/input_3.txt
+python answer.py < input/input_hard.txt
 ```
+
+3D 시각화는 브라우저에서 `answer_3D_visualization.html`을 열어서 사용한다.  
+브라우저 안에서 `U`, `U'`, `U2` 등의 move 버튼으로 직접 큐브 상태를 만든 뒤 바로 `Solve`할 수 있다.
 
 ## 예상 답
 
@@ -83,3 +87,6 @@ python answer_visualization.py < input/input_3.txt
 - `input_3.txt`
   - 출력 첫 줄: `3`
   - 출력 둘째 줄: `U' R' F2`
+- `input_hard.txt`
+  - 출력 첫 줄: `8`
+  - 출력 둘째 줄: `R2 U2 B2 D' L' F2 R' U'`
