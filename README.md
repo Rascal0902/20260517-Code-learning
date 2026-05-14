@@ -21,3 +21,5 @@ git push origin main
 1. Stirling numbers of the second kind & Catalan numbers
 2. Dijkstra's algorithm
 3. Cube Solving
+4. Line Segment Intersection
+5. Modular Inverse
